@@ -364,7 +364,7 @@ object FirKotlinToJvmBytecodeCompiler {
     )
 }
 
-internal fun findMainClass(fir: List<FirFile>): FqName? {
+fun findMainClass(fir: List<FirFile>): FqName? {
     // TODO: replace with proper main function detector, KT-44557
     val compatibleClasses = mutableListOf<FqName>()
     val visitor = object : FirVisitorVoid() {
