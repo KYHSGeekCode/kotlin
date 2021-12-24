@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
 import org.jetbrains.kotlin.backend.common.phaser.*
 import org.jetbrains.kotlin.backend.common.serialization.DescriptorByIdSignatureFinderImpl
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
+import org.jetbrains.kotlin.backend.jvm.ir.getIoFile
 import org.jetbrains.kotlin.backend.jvm.ir.getKtFile
 import org.jetbrains.kotlin.backend.jvm.serialization.JvmIdSignatureDescriptor
 import org.jetbrains.kotlin.codegen.CodegenFactory
@@ -245,7 +246,7 @@ open class JvmIrCodegenFactory(
         /* JvmBackendContext creates new unbound symbols, have to resolve them. */
         ExternalDependenciesGenerator(symbolTable, irProviders).generateUnboundSymbolsAsDependencies()
 
-        context.state.factory.registerSourceFiles(irModuleFragment.files.map(IrFile::getKtFile))
+        context.state.factory.registerSourceFiles(irModuleFragment.files.map(IrFile::getIoFile))
 
         phases.invokeToplevel(phaseConfig, context, irModuleFragment)
 
