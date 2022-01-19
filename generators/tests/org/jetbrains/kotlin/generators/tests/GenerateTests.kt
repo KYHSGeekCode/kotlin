@@ -54,6 +54,7 @@ fun main(args: Array<String>) {
             testClass<AbstractIncrementalJvmOldBackendCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM))
             testClass<AbstractIncrementalFirJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
             testClass<AbstractIncrementalFirICLightTreeJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
+            testClass<AbstractIncrementalFirLightTreeJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
 
             testClass<AbstractIncrementalJsCompilerRunnerTest> {
                 model("incremental/pureKotlin", extension = null, recursive = false)
