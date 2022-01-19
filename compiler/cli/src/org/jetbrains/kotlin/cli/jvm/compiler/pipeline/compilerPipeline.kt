@@ -117,7 +117,13 @@ fun compileModulesUsingFrontendIrAndLaightTree(
             moduleConfiguration
         )
         val compilerEnvironment = ModuleCompilerEnvironment(projectEnvironment, diagnosticsReporter)
-        val analysisResults = compileModuleToAnalyzedFir(compilerInput, compilerEnvironment, emptyList(), diagnosticsReporter)
+        val analysisResults = compileModuleToAnalyzedFir(
+            compilerInput,
+            compilerEnvironment,
+            emptyList(),
+            null,
+            diagnosticsReporter
+        )
         // TODO: consider what to do if many modules has main classes
         if (mainClassFqName == null && moduleConfiguration.get(JVMConfigurationKeys.OUTPUT_JAR) != null) {
             mainClassFqName = findMainClass(analysisResults.fir)
@@ -213,6 +219,7 @@ fun compileModuleToAnalyzedFir(
     input: ModuleCompilerInput,
     environment: ModuleCompilerEnvironment,
     previousStepsSymbolProviders: List<FirSymbolProvider>,
+    incrementalExcludesScope: AbstractProjectFileSearchScope?,
     diagnosticsReporter: DiagnosticReporter
 ): ModuleCompilerAnalyzedOutput {
     var sourcesScope = environment.projectEnvironment.getSearchScopeByIoFiles(input.platformSources) //!!
@@ -233,6 +240,7 @@ fun compileModuleToAnalyzedFir(
             CommonPlatformAnalyzerServices,
             sessionProvider,
             previousStepsSymbolProviders,
+            incrementalExcludesScope,
             extendedAnalysisMode
         )
     }
@@ -246,6 +254,7 @@ fun compileModuleToAnalyzedFir(
         JvmPlatformAnalyzerServices,
         sessionProvider,
         previousStepsSymbolProviders,
+        incrementalExcludesScope,
         extendedAnalysisMode
     ) {
         if (commonSession != null) {
@@ -316,13 +325,20 @@ fun createSession(
     analyzerServices: PlatformDependentAnalyzerServices,
     sessionProvider: FirProjectSessionProvider?,
     previousStepsSymbolProviders: List<FirSymbolProvider>,
+    incrementalExcludesScope: AbstractProjectFileSearchScope?,
     extendedAnalysisMode: Boolean,
     dependenciesConfigurator: DependencyListForCliModule.Builder.() -> Unit = {},
 ): FirSession {
     var librariesScope = projectEnvironment.getSearchScopeForProjectLibraries()
 
     val providerAndScopeForIncrementalCompilation =
-        createContextForIncrementalCompilation(moduleConfiguration, projectEnvironment, sourceScope, previousStepsSymbolProviders)
+        createContextForIncrementalCompilation(
+            moduleConfiguration,
+            projectEnvironment,
+            sourceScope,
+            previousStepsSymbolProviders,
+            incrementalExcludesScope
+        )
             ?.also { (_, _, precompiledBinariesFileScope) ->
                 precompiledBinariesFileScope?.let { librariesScope -= it }
             }
@@ -338,7 +354,8 @@ fun createSession(
         librariesScope,
         lookupTracker = moduleConfiguration.get(CommonConfigurationKeys.LOOKUP_TRACKER),
         providerAndScopeForIncrementalCompilation,
-        extensionRegistrars = (projectEnvironment as? VfsBasedProjectEnvironment)?.let { FirExtensionRegistrar.getInstances(it.project) } ?: emptyList(),
+        extensionRegistrars = (projectEnvironment as? VfsBasedProjectEnvironment)?.let { FirExtensionRegistrar.getInstances(it.project) }
+            ?: emptyList(),
         dependenciesConfigurator = {
             dependencies(moduleConfiguration.jvmClasspathRoots.map { it.toPath() })
             dependencies(moduleConfiguration.jvmModularRoots.map { it.toPath() })
@@ -357,15 +374,18 @@ private fun createContextForIncrementalCompilation(
     projectEnvironment: AbstractProjectEnvironment,
     sourceScope: AbstractProjectFileSearchScope,
     previousStepsSymbolProviders: List<FirSymbolProvider>,
+    incrementalExcludesScope: AbstractProjectFileSearchScope?,
 ): FirSessionFactory.IncrementalCompilationContext? {
     val targetIds = compilerConfiguration.get(JVMConfigurationKeys.MODULES)?.map(::TargetId)
     val incrementalComponents = compilerConfiguration.get(JVMConfigurationKeys.INCREMENTAL_COMPILATION_COMPONENTS)
     if (targetIds == null || incrementalComponents == null) return null
-    val directoryWithIncrementalPartsFromPreviousCompilation =
-        compilerConfiguration[JVMConfigurationKeys.OUTPUT_DIRECTORY]
-    val incrementalCompilationScope = directoryWithIncrementalPartsFromPreviousCompilation?.walk()
-        ?.filter { it.extension == "class" }
-        ?.let { projectEnvironment.getSearchScopeByIoFiles(it.asIterable()) }
+    val incrementalCompilationScope =
+        compilerConfiguration[JVMConfigurationKeys.OUTPUT_DIRECTORY]?.let { dir ->
+            projectEnvironment.getSearchScopeByDirectories(setOf(dir)).let {
+                if (incrementalExcludesScope?.isEmpty != false) it
+                else it - incrementalExcludesScope
+            }
+        }
 
     return if (incrementalCompilationScope == null && previousStepsSymbolProviders.isEmpty()) null
     else FirSessionFactory.IncrementalCompilationContext(

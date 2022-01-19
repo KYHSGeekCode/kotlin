@@ -49,6 +49,7 @@ import org.jetbrains.kotlin.fir.languageVersionSettings
 import org.jetbrains.kotlin.fir.moduleData
 import org.jetbrains.kotlin.fir.resolve.providers.firProvider
 import org.jetbrains.kotlin.fir.resolve.providers.impl.FirProviderImpl
+import org.jetbrains.kotlin.fir.session.environment.AbstractProjectFileSearchScope
 import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
 import org.jetbrains.kotlin.incremental.components.InlineConstTracker
 import org.jetbrains.kotlin.incremental.components.LookupTracker
@@ -101,7 +102,7 @@ class IncrementalFirJvmCompilerRunner(
         val moduleName = args.moduleName ?: JvmProtoBufUtil.DEFAULT_MODULE_NAME
         val targetId = TargetId(moduleName, "java-production") // TODO: get rid of magic constant
 
-        var dirtySources = linkedSetOf<File>().apply { addAll(sourcesToCompile) }
+        val dirtySources = linkedSetOf<File>().apply { addAll(sourcesToCompile) }
 
         // TODO: probably shoudl be passed along with sourcesToCompile
         // TODO: file path normalization
@@ -192,6 +193,8 @@ class IncrementalFirJvmCompilerRunner(
             // !! main class - maybe from cache?
             var mainClassFqName: FqName? = null
 
+            var incrementalExcludesScope: AbstractProjectFileSearchScope? = null
+
             fun firIncrementalCycle(): ModuleCompilerAnalyzedOutput? {
                 while (true) {
 
@@ -207,6 +210,7 @@ class IncrementalFirJvmCompilerRunner(
                             compilerInput,
                             compilerEnvironment,
                             emptyList(),
+                            incrementalExcludesScope,
                             diagnosticsReporter
                         )
 
@@ -228,6 +232,15 @@ class IncrementalFirJvmCompilerRunner(
                     if (!isIncremental || newDirtySources.isEmpty()) return analysisResults
 
                     caches.platformCache.markDirty(newDirtySources)
+                    val newDirtyFilesOutputsScope =
+                        projectEnvironment.getSearchScopeByIoFiles(caches.inputsCache.getOutputForSourceFiles(newDirtySources))
+                    incrementalExcludesScope = incrementalExcludesScope.let {
+                        when {
+                            newDirtyFilesOutputsScope.isEmpty -> it
+                            it == null || it.isEmpty -> newDirtyFilesOutputsScope
+                            else -> it + newDirtyFilesOutputsScope
+                        }
+                    }
                     caches.inputsCache.removeOutputForSourceFiles(newDirtySources)
                     dirtySources.addAll(newDirtySources)
                     projectEnvironment.localFileSystem.refresh(false)
