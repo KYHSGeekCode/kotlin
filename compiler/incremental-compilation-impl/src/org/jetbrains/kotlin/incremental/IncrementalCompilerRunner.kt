@@ -372,6 +372,7 @@ abstract class IncrementalCompilerRunner<
                 compiled
             }
 
+            dirtySources.addAll(compiledSources)
 
             val generatedFiles = outputItemsCollector.outputs.map(SimpleOutputItem::toGeneratedFile)
             if (compilationMode is CompilationMode.Incremental) {
