@@ -14,6 +14,7 @@ import org.gradle.api.services.BuildServiceParameters
 import org.jetbrains.kotlin.gradle.logging.kotlinDebug
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskExecutionResults
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskLoggers
+import org.jetbrains.kotlin.gradle.plugin.stat.CompileStatData
 import org.jetbrains.kotlin.gradle.plugin.stat.ReportStatistics
 import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatListener
 import org.jetbrains.kotlin.gradle.plugin.statistics.ReportStatisticsToBuildScan
@@ -22,6 +23,10 @@ import org.jetbrains.kotlin.gradle.report.BuildReportType
 import org.jetbrains.kotlin.gradle.report.ReportingSettings
 import org.jetbrains.kotlin.gradle.report.reportingSettings
 import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 
 internal abstract class KotlinGradleBuildServices : BuildService<KotlinGradleBuildServices.Parameters>, AutoCloseable {
 
@@ -45,32 +50,34 @@ internal abstract class KotlinGradleBuildServices : BuildService<KotlinGradleBui
         buildHandler.buildFinished(parameters.buildDir, parameters.rootDir)
         log.kotlinDebug(DISPOSE_MESSAGE)
 
+        buildMetricReporterWorker?.shutdown()
+        buildMetricReporterWorker = null
+
         TaskLoggers.clear()
         TaskExecutionResults.clear()
     }
 
     companion object {
+        private const val timeoutInSeconds = 10L
+
+        private var buildMetricReporterWorker: ExecutorService? = null
 
         fun registerIfAbsent(project: Project): Provider<KotlinGradleBuildServices> = project.gradle.sharedServices.registerIfAbsent(
             "kotlin-build-service-${KotlinGradleBuildServices::class.java.canonicalName}_${KotlinGradleBuildServices::class.java.classLoader.hashCode()}",
             KotlinGradleBuildServices::class.java
         ) { service ->
+            val reporterWorker = Executors.newSingleThreadExecutor()
             service.parameters.rootDir = project.rootProject.rootDir
             service.parameters.buildDir = project.rootProject.buildDir
 
             val reportingSettings = reportingSettings(project.rootProject)
-            addListeners(project, reportingSettings)
+            addListeners(project, reportingSettings, reporterWorker)
+            buildMetricReporterWorker = reporterWorker
         }
 
-        fun addListeners(project: Project, reportingSettings: ReportingSettings) {
+        fun addListeners(project: Project, reportingSettings: ReportingSettings, reporterWorker: ExecutorService) {
             val listeners = project.rootProject.objects.listProperty(ReportStatistics::class.java)
                 .value(listOf<ReportStatistics>())
-
-            reportingSettings.httpReportSettings?.let {
-                listeners.add(
-                    ReportStatisticsByHttp(reportingSettings.httpReportSettings)
-                )
-            }
 
             project.rootProject.extensions.findByName("buildScan")
                 ?.also {
@@ -81,7 +88,7 @@ internal abstract class KotlinGradleBuildServices : BuildService<KotlinGradleBui
 
             if (listeners.get().isNotEmpty()) {
                 val listenerRegistryHolder = BuildEventsListenerRegistryHolder.getInstance(project)
-                val statListener = KotlinBuildStatListener(project.rootProject.name, listeners.get())
+                val statListener = KotlinBuildStatListener(project.rootProject.name, reportingSettings.buildReportLabel, listeners.get())
                 listenerRegistryHolder.listenerRegistry.onTaskCompletion(project.provider { statListener })
             }
         }

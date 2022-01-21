@@ -10,6 +10,7 @@ import org.gradle.api.logging.Logging
 import org.jetbrains.kotlin.gradle.plugin.stat.CompileStatData
 import org.jetbrains.kotlin.gradle.plugin.stat.ReportStatistics
 import org.jetbrains.kotlin.konan.file.File
+import java.util.function.Consumer
 import kotlin.system.measureTimeMillis
 
 class ReportStatisticsToBuildScan(

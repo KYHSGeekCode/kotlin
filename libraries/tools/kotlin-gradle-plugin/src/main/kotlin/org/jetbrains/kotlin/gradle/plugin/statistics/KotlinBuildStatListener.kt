@@ -12,7 +12,6 @@ import org.gradle.tooling.events.task.TaskFailureResult
 import org.gradle.tooling.events.task.TaskFinishEvent
 import org.gradle.tooling.events.task.TaskSkippedResult
 import org.gradle.tooling.events.task.TaskSuccessResult
-import org.jetbrains.kotlin.cli.common.CompilerSystemProperties
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskExecutionResults
 import org.jetbrains.kotlin.gradle.plugin.stat.CompileStatData
 import org.jetbrains.kotlin.gradle.plugin.stat.ReportStatistics
@@ -32,84 +31,80 @@ enum class TaskExecutionState {
     ;
 }
 
-class KotlinBuildStatListener(val projectName: String, val reportStatistics: List<ReportStatistics>) :
-    OperationCompletionListener, AutoCloseable {
-
-    companion object {
-        /*
-            All listeners process events in single thread pool. After build finished it has only 60 seconds to finish processing.
-            Our listeners should not spend significant amount of time during event processing.
-        */
-        const val LIMIT_DURATION_MS = 5 * 1000
-    }
+class KotlinBuildStatListener(
+    val projectName: String,
+    val label: String?,
+    val reportStatistics: List<ReportStatistics>
+) : OperationCompletionListener, AutoCloseable {
 
     private val log = Logging.getLogger(this.javaClass)
     val buildUuid: String = UUID.randomUUID().toString()
 
-    val label by lazy { CompilerSystemProperties.KOTLIN_STAT_LABEl_PROPERTY.value }
-    val hostName: String? = try {
-        InetAddress.getLocalHost().hostName
-    } catch (_: Exception) {
-        //do nothing
-        null
-    }
+    companion object {
+        val hostName: String? = try {
+            InetAddress.getLocalHost().hostName
+        } catch (_: Exception) {
+            //do nothing
+            null
+        }
 
-    override fun onFinish(event: FinishEvent?) {
-        val measuredTimeMs = measureTimeMillis {
-            if (event is TaskFinishEvent) {
-                val result = event.result
-                val taskPath = event.descriptor.taskPath
-                val duration = result.endTime - result.startTime
-                val taskResult = when (result) {
-                    is TaskSuccessResult -> when {
-                        result.isFromCache -> TaskExecutionState.FROM_CACHE
-                        result.isUpToDate -> TaskExecutionState.UP_TO_DATE
-                        else -> TaskExecutionState.SUCCESS
-                    }
+        private fun availableForStat(taskPath: String): Boolean {
+            return taskPath.contains("Kotlin") && (TaskExecutionResults[taskPath] != null)
+        }
 
-                    is TaskSkippedResult -> TaskExecutionState.SKIPPED
-                    is TaskFailureResult -> TaskExecutionState.FAILED
-                    else -> TaskExecutionState.UNKNOWN
+        internal fun prepareData(event: TaskFinishEvent, projectName:String, uuid: String, label: String?): CompileStatData? {
+            val result = event.result
+            val taskPath = event.descriptor.taskPath
+            val duration = result.endTime - result.startTime
+            val taskResult = when (result) {
+                is TaskSuccessResult -> when {
+                    result.isFromCache -> TaskExecutionState.FROM_CACHE
+                    result.isUpToDate -> TaskExecutionState.UP_TO_DATE
+                    else -> TaskExecutionState.SUCCESS
                 }
 
-                reportData(taskPath, duration, taskResult)
+                is TaskSkippedResult -> TaskExecutionState.SKIPPED
+                is TaskFailureResult -> TaskExecutionState.FAILED
+                else -> TaskExecutionState.UNKNOWN
             }
-        }
-        if (measuredTimeMs > LIMIT_DURATION_MS) {
-            log.warn("Exceed time limit for $event. Takes ${measuredTimeMs}ms ")
-        }
-    }
 
-    private fun reportData(taskPath: String, duration: Long, taskResult: TaskExecutionState) {
-        val (reportDataDuration, compileStatData) = measureTimeMillisWithResult {
             if (!availableForStat(taskPath)) {
-                return
+                return null
             }
 
             val taskExecutionResult = TaskExecutionResults[taskPath]
             val timeData = taskExecutionResult?.buildMetrics?.buildTimes?.asMap()?.filterValues { value -> value != 0L } ?: emptyMap()
-            val perfData = taskExecutionResult?.buildMetrics?.buildPerformanceMetrics?.asMap()?.filterValues { value -> value != 0L } ?: emptyMap()
+            val perfData =
+                taskExecutionResult?.buildMetrics?.buildPerformanceMetrics?.asMap()?.filterValues { value -> value != 0L } ?: emptyMap()
             val changes = when (val changedFiles = taskExecutionResult?.taskInfo?.changedFiles) {
                 is ChangedFiles.Known -> changedFiles.modified.map { it.absolutePath } + changedFiles.removed.map { it.absolutePath }
                 is ChangedFiles.Dependencies -> changedFiles.modified.map { it.absolutePath } + changedFiles.removed.map { it.absolutePath }
                 else -> emptyList<String>()
 
             }
-            val compileStatData = CompileStatData(
+            return CompileStatData(
                 duration = duration, taskResult = taskResult.name, label = label,
                 timeData = timeData, perfData = perfData, projectName = projectName, taskName = taskPath, changes = changes,
                 tags = taskExecutionResult?.taskInfo?.properties?.map { it.name } ?: emptyList(),
                 nonIncrementalAttributes = taskExecutionResult?.buildMetrics?.buildAttributes?.asMap() ?: emptyMap(),
-                hostName = hostName, kotlinVersion = "1.6", buildUuid = buildUuid, timeInMillis = System.currentTimeMillis()
+                hostName = hostName, kotlinVersion = "1.6", buildUuid = uuid, timeInMillis = System.currentTimeMillis()
             )
-            reportStatistics.forEach { it.report(compileStatData) }
-            compileStatData
         }
-        log.debug("Report data takes $reportDataDuration: $compileStatData")
+
     }
 
-    private fun availableForStat(taskPath: String): Boolean {
-        return taskPath.contains("Kotlin") && (TaskExecutionResults[taskPath] != null)
+    override fun onFinish(event: FinishEvent?) {
+        if (event is TaskFinishEvent) {
+            val (collectDataDuration, compileStatData) = measureTimeMillisWithResult {
+                prepareData(event, projectName, buildUuid, label)
+            }
+            log.debug("Collect data takes $collectDataDuration: $compileStatData")
+
+            val reportDataDuration = measureTimeMillis {
+                compileStatData?.also { data -> reportStatistics.forEach { it.report(data) }}
+            }
+            log.debug("Report data takes $reportDataDuration: $compileStatData")
+        }
     }
 
     override fun close() {

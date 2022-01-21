@@ -7,10 +7,8 @@ package org.jetbrains.kotlin.gradle.plugin.statistics
 
 import com.google.gson.Gson
 import org.gradle.api.logging.Logging
-import org.jetbrains.kotlin.cli.common.CompilerSystemProperties
-import org.jetbrains.kotlin.cli.common.toBooleanLenient
-import org.jetbrains.kotlin.gradle.plugin.stat.ReportStatistics
 import org.jetbrains.kotlin.gradle.plugin.stat.CompileStatData
+import org.jetbrains.kotlin.gradle.plugin.stat.ReportStatistics
 import org.jetbrains.kotlin.gradle.report.HttpReportSettings
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,7 +17,7 @@ import kotlin.system.measureTimeMillis
 
 class ReportStatisticsByHttp(
     private val httpProperties: HttpReportSettings
-) : ReportStatistics {
+) : ReportStatistics, AutoCloseable {
 
     private val log = Logging.getLogger(this.javaClass)
 
@@ -58,5 +56,8 @@ class ReportStatisticsByHttp(
                 "Failed to send statistic to ${connection.url}: ${connection.responseMessage}"
             )
         }
+    }
+
+    override fun close() {
     }
 }
