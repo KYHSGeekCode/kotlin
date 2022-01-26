@@ -7,5 +7,5 @@ public interface Named {
 // FILE: test.kt
 
 fun foo(n: Named) {
-    n.name = "";
+    n.<!VAL_REASSIGNMENT!>name<!> = "";
 }
