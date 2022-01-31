@@ -1,0 +1,19 @@
+KtSuccessCallInfo:
+  call = KtSimpleFunctionCall:
+    isImplicitInvoke = true
+    partiallyAppliedSymbol = KtPartiallyAppliedSymbol:
+      dispatchReceiver = KtExplicitReceiverValue:
+        expression = x
+        isSafeNavigation = false
+      extensionReceiver = null
+      signature = KtFunctionLikeSignature:
+        receiverType = null
+        returnType = kotlin.Unit
+        symbol = kotlin/Function1.invoke(<dispatch receiver>: kotlin.Function1<@R|kotlin.ParameterName|(name = String(a))  kotlin.Int, kotlin.Unit>, a: @R|kotlin.ParameterName|(name = String(a))  kotlin.Int): kotlin.Unit
+        valueParameters = [
+          KtVariableLikeSignature:
+            receiverType = null
+            returnType = @R|kotlin.ParameterName|(name = String(a))  kotlin.Int
+            symbol = a: @R|kotlin.ParameterName|(name = String(a))  kotlin.Int
+        ]
+    argumentMapping = {}
