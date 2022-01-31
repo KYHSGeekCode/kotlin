@@ -39,4 +39,6 @@ open class KtDecompiledFile(
     fun <T : Any> hasDeclarationWithKey(indexer: DecompiledTextIndexer<T>, key: T): Boolean {
         return decompiledText.get().index.getRange(indexer, key) != null
     }
+
+    override fun setPackageName(packageName: String) {}
 }

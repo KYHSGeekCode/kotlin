@@ -204,7 +204,9 @@ open class KtFile(viewProvider: FileViewProvider, val isCompiled: Boolean) :
         return fileClassProvider?.getFileClasses(this) ?: PsiClass.EMPTY_ARRAY
     }
 
-    override fun setPackageName(packageName: String) {}
+    override fun setPackageName(packageName: String) {
+        packageDirective?.fqName = FqName(packageName)
+    }
 
     override fun clearCaches() {
         @Suppress("RemoveExplicitSuperQualifier")
