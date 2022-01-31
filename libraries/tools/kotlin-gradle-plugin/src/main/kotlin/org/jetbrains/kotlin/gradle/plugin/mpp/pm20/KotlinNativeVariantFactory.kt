@@ -31,7 +31,7 @@ class KotlinNativeVariantInstantiator<T : KotlinNativeVariantInternal>(
         DefaultKotlinCompileDependenciesConfigurationInstantiator,
 
     private val apiElementsConfigurationInstantiator: KotlinApiElementsConfigurationInstantiator =
-        DefaultKotlinApiElementsConfigurationInstantiator,
+        NativeKotlinApiElementsConfigurationInstantiator,
 
     private val hostSpecificMetadataElementsConfigurationInstantiator: KotlinHostSpecificMetadataElementsConfigurationInstantiator? =
         DefaultKotlinHostSpecificMetadataElementsConfigurationInstantiator(kotlinNativeVariantConstructor.konanTarget)

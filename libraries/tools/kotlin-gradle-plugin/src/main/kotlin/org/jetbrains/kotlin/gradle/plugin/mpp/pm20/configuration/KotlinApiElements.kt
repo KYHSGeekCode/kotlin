@@ -32,6 +32,17 @@ object DefaultKotlinApiElementsConfigurationInstantiator : KotlinApiElementsConf
     }
 }
 
+object NativeKotlinApiElementsConfigurationInstantiator : KotlinApiElementsConfigurationInstantiator {
+    override fun create(
+        module: KotlinGradleModule,
+        names: KotlinNameDisambiguation,
+        dependencies: KotlinFragmentDependencyConfigurations,
+    ): Configuration =
+        DefaultKotlinApiElementsConfigurationInstantiator.create(module, names, dependencies).apply {
+            extendsFrom(dependencies.transitiveImplementationConfiguration)
+        }
+}
+
 val DefaultKotlinApiElementsConfigurator = KotlinConfigurationsConfigurator(
     KotlinFragmentPlatformAttributesConfigurator,
     KotlinFragmentModuleCapabilityConfigurator,
