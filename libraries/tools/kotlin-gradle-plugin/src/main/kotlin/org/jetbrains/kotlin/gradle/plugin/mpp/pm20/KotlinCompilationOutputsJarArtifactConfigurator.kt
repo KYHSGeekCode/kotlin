@@ -10,6 +10,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.disambiguateName
 import org.jetbrains.kotlin.gradle.tasks.locateOrRegisterTask
+import org.jetbrains.kotlin.gradle.utils.dashSeparatedLowercaseName
 import org.jetbrains.kotlin.gradle.utils.dashSeparatedName
 
 /**
@@ -19,7 +20,7 @@ object KotlinCompilationOutputsJarArtifactConfigurator : KotlinFragmentConfigura
     override fun configure(fragment: KotlinGradleVariant, configuration: Configuration) {
         val jarTask = fragment.project.locateOrRegisterTask<Jar>(fragment.outputsJarTaskName) {
             it.from(fragment.compilationOutputs.allOutputs)
-            it.archiveClassifier.set(dashSeparatedName(fragment.name, fragment.containingModule.moduleClassifier))
+            it.archiveAppendix.set(dashSeparatedLowercaseName(fragment.name, fragment.containingModule.moduleClassifier))
         }
         fragment.project.artifacts.add(configuration.name, jarTask)
         fragment.project.artifacts.add(Dependency.ARCHIVES_CONFIGURATION, jarTask)
