@@ -20,7 +20,7 @@ class ReportStatisticsToBuildScan(
         const val kbSize = 1024
         const val mbSize = kbSize * kbSize
         const val gbSize = kbSize * mbSize
-        const val lengthLimit = 20
+        const val lengthLimit = 100_000
     }
 
     private val tags = LinkedHashSet<String>()

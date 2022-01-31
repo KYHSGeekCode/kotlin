@@ -27,12 +27,14 @@ abstract class HttpReportService : BuildService<HttpReportService.Parameters>,
     OperationCompletionListener, AutoCloseable {
 
     var executorService: ExecutorService = Executors.newSingleThreadExecutor()
+
     interface Parameters : BuildServiceParameters {
         var label: String?
         var uuid: String
         var projectName: String
         var httpSettings: HttpReportSettings
     }
+
     private val log = Logging.getLogger(this.javaClass)
 
     override fun onFinish(event: FinishEvent?) {
@@ -99,9 +101,7 @@ abstract class HttpReportService : BuildService<HttpReportService.Parameters>,
     private fun checkResponseAndLog(connection: HttpURLConnection) {
         val isResponseBad = connection.responseCode !in 200..299
         if (isResponseBad) {
-            throw Exception(
-                "Failed to send statistic to ${connection.url}: ${connection.responseMessage}"
-            )
+            log.warn("Failed to send statistic to ${connection.url}: ${connection.responseMessage}")
         }
     }
 
