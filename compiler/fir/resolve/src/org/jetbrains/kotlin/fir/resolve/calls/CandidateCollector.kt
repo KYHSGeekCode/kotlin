@@ -55,3 +55,18 @@ open class CandidateCollector(
         return currentApplicability.isSuccess
     }
 }
+
+class AllCandidatesCollector(
+    components: BodyResolveComponents,
+    resolutionStageRunner: ResolutionStageRunner
+) : CandidateCollector(components, resolutionStageRunner) {
+    private val allCandidatesSet = mutableSetOf<Candidate>()
+
+    override fun consumeCandidate(group: TowerGroup, candidate: Candidate, context: ResolutionContext): CandidateApplicability {
+        allCandidatesSet += candidate
+        return super.consumeCandidate(group, candidate, context)
+    }
+
+    val allCandidates: List<Candidate>
+        get() = allCandidatesSet.toList()
+}

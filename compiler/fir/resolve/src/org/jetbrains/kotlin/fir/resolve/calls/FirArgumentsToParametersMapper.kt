@@ -133,7 +133,10 @@ private class FirCallArgumentsProcessor(
     }
 
     fun processNonLambdaArguments(arguments: List<FirExpression>) {
-        for (argument in arguments) {
+        // If the argument list was already resolved, any arguments for a vararg parameter will be in a FirVarargArgumentsExpression.
+        // This can happen when getting all the candidates for an already resolved function call.
+        val expandedArguments = arguments.flatMap { if (it is FirVarargArgumentsExpression) it.arguments else listOf(it) }
+        for (argument in expandedArguments) {
             // process position argument
             if (argument !is FirNamedArgumentExpression) {
                 if (processPositionArgument(argument, isLastArgument = argument === arguments.last())) {
