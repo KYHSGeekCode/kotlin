@@ -4,11 +4,11 @@ KtSuccessCallInfo:
     partiallyAppliedSymbol = KtPartiallyAppliedSymbol:
       dispatchReceiver = null
       extensionReceiver = KtExplicitReceiverValue:
-        expression = x
+        expression = i()
         isSafeNavigation = false
       signature = KtFunctionLikeSignature:
-        receiverType = kotlin.Int
-        returnType = kotlin.String
-        symbol = /invoke(<extension receiver>: kotlin.Int): kotlin.String
+        receiverType = kotlin.Long
+        returnType = kotlin.Double
+        symbol = /invoke(<extension receiver>: kotlin.Long): kotlin.Double
         valueParameters = []
     argumentMapping = {}

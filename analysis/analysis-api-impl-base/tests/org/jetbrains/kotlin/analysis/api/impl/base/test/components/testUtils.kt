@@ -7,7 +7,9 @@ package org.jetbrains.kotlin.analysis.api.impl.base.test.components
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.analysis.api.KtAnalysisSession
+import org.jetbrains.kotlin.analysis.api.calls.KtCall
 import org.jetbrains.kotlin.analysis.api.calls.KtCallInfo
+import org.jetbrains.kotlin.analysis.api.calls.KtCallableMemberCall
 import org.jetbrains.kotlin.analysis.api.diagnostics.KtDiagnostic
 import org.jetbrains.kotlin.analysis.api.impl.base.KtMapBackedSubstitutor
 import org.jetbrains.kotlin.analysis.api.symbols.*
@@ -78,7 +80,8 @@ internal fun KtAnalysisSession.stringRepresentation(call: KtCallInfo): String {
             is Enum<*> -> name
             else -> buildString {
                 val clazz = this@stringValue::class
-                append(clazz.simpleName!!)
+                val className = clazz.simpleName!!
+                append(className)
                 appendLine(":")
                 clazz.memberProperties
                     .filter { it.name != "token" && it.visibility == KVisibility.PUBLIC }
@@ -86,9 +89,18 @@ internal fun KtAnalysisSession.stringRepresentation(call: KtCallInfo): String {
                         val name = property.name
 
                         @Suppress("UNCHECKED_CAST")
-                        val value =
-                            (property as KProperty1<Any, *>).get(this@stringValue)?.stringValue()?.indented()
-                        "$name = $value"
+                        val value = (property as KProperty1<Any, *>).get(this@stringValue)?.let {
+                            if (className == "KtErrorCallInfo" && name == "candidateCalls") {
+                                // The order of calls in KtErrorCallInfo.candidateCalls is non-deterministic. Sort by symbol string value.
+                                (it as Collection<KtCall>).sortedWith { call1, call2 ->
+                                    if (call1 is KtCallableMemberCall<*, *> && call2 is KtCallableMemberCall<*, *>) {
+                                        call1.partiallyAppliedSymbol.stringValue().compareTo(call2.partiallyAppliedSymbol.stringValue())
+                                    } else 0
+                                }
+                            } else it
+                        }
+                        val valueAsString = value?.stringValue()?.indented()
+                        "$name = $valueAsString"
                     }
             }
         }

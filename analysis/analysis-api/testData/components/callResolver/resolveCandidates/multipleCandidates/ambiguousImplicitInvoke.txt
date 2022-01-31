@@ -1,0 +1,66 @@
+KtErrorCallInfo:
+  candidateCalls = [
+    KtSimpleFunctionCall:
+      isImplicitInvoke = true
+      partiallyAppliedSymbol = KtPartiallyAppliedSymbol:
+        dispatchReceiver = null
+        extensionReceiver = KtExplicitReceiverValue:
+          expression = x
+          isSafeNavigation = false
+        signature = KtFunctionLikeSignature:
+          receiverType = kotlin.Int
+          returnType = kotlin.Unit
+          symbol = invoke(<extension receiver>: kotlin.Int, a: kotlin.String): kotlin.Unit
+          valueParameters = [
+            KtVariableLikeSignature:
+              receiverType = null
+              returnType = kotlin.String
+              symbol = a: kotlin.String
+          ]
+      argumentMapping = {}
+  ]
+  diagnostic = ERROR<NO_VALUE_FOR_PARAMETER: No value passed for parameter 'a'>
+
+KtErrorCallInfo:
+  candidateCalls = [
+    KtSimpleFunctionCall:
+      isImplicitInvoke = true
+      partiallyAppliedSymbol = KtPartiallyAppliedSymbol:
+        dispatchReceiver = null
+        extensionReceiver = KtExplicitReceiverValue:
+          expression = x
+          isSafeNavigation = false
+        signature = KtFunctionLikeSignature:
+          receiverType = kotlin.Int
+          returnType = kotlin.Unit
+          symbol = invoke(<extension receiver>: kotlin.Int, b: kotlin.Boolean): kotlin.Unit
+          valueParameters = [
+            KtVariableLikeSignature:
+              receiverType = null
+              returnType = kotlin.Boolean
+              symbol = b: kotlin.Boolean
+          ]
+      argumentMapping = {}
+  ]
+  diagnostic = ERROR<NO_VALUE_FOR_PARAMETER: No value passed for parameter 'b'>
+
+KtErrorCallInfo:
+  candidateCalls = [
+    KtSimpleFunctionCall:
+      isImplicitInvoke = false
+      partiallyAppliedSymbol = KtPartiallyAppliedSymbol:
+        dispatchReceiver = null
+        extensionReceiver = null
+        signature = KtFunctionLikeSignature:
+          receiverType = null
+          returnType = kotlin.Unit
+          symbol = /x(c: kotlin.Char): kotlin.Unit
+          valueParameters = [
+            KtVariableLikeSignature:
+              receiverType = null
+              returnType = kotlin.Char
+              symbol = c: kotlin.Char
+          ]
+      argumentMapping = {}
+  ]
+  diagnostic = ERROR<NO_VALUE_FOR_PARAMETER: No value passed for parameter 'c'>

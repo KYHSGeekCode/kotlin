@@ -48,7 +48,7 @@ open class CandidateCollector(
 
     fun bestCandidates(): List<Candidate> = candidates
 
-    fun shouldStopAtTheLevel(group: TowerGroup): Boolean =
+    open fun shouldStopAtTheLevel(group: TowerGroup): Boolean =
         currentApplicability.shouldStopResolve && bestGroup < group
 
     fun isSuccess(): Boolean {
@@ -66,6 +66,9 @@ class AllCandidatesCollector(
         allCandidatesSet += candidate
         return super.consumeCandidate(group, candidate, context)
     }
+
+    // We want to get candidates at all tower levels.
+    override fun shouldStopAtTheLevel(group: TowerGroup): Boolean = false
 
     val allCandidates: List<Candidate>
         get() = allCandidatesSet.toList()

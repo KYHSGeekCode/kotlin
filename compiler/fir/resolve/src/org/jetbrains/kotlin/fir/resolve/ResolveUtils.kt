@@ -319,6 +319,9 @@ private inline fun <T : FirExpression> BodyResolveComponents.transformExpression
     smartcastBuilder: () -> FirWrappedExpressionWithSmartcastBuilder<T>,
     smartcastToNullBuilder: () -> FirWrappedExpressionWithSmartcastToNullBuilder<T>
 ): FirWrappedExpressionWithSmartcastBuilder<T>? {
+    // No need to check for smartcast if the expression was already resolved.
+    containingDeclarations.lastOrNull()?.let { if (it.resolvePhase >= FirResolvePhase.BODY_RESOLVE) return null }
+
     val (stability, typesFromSmartCast) = smartcastExtractor(expression) ?: return null
     val smartcastStability = stability.impliedSmartcastStability
         ?: if (dataFlowAnalyzer.isAccessToUnstableLocalVariable(expression)) {
