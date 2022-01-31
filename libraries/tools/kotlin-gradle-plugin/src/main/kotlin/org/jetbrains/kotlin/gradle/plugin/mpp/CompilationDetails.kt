@@ -397,6 +397,10 @@ internal open class SharedNativeCompilationDetails(
             }
             project.files(friendSourceSets.mapNotNull { project.getMetadataCompilationForSourceSet(it)?.output?.classesDirs })
         })
+
+    override fun addSourcesToCompileTask(sourceSet: KotlinSourceSet, addAsCommonSources: Lazy<Boolean>) {
+        addSourcesToKotlinNativeCompileTask(project, compileKotlinTaskName, { sourceSet.kotlin }, addAsCommonSources)
+    }
 }
 
 internal open class VariantMappedCompilationDetails<T : KotlinCommonOptions>(
