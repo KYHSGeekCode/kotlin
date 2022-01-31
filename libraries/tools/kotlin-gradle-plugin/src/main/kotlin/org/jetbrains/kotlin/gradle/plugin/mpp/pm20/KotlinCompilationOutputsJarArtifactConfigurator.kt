@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.gradle.plugin.mpp.pm20
 
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.disambiguateName
 import org.jetbrains.kotlin.gradle.tasks.locateOrRegisterTask
@@ -21,6 +22,7 @@ object KotlinCompilationOutputsJarArtifactConfigurator : KotlinFragmentConfigura
             it.archiveClassifier.set(dashSeparatedName(fragment.name, fragment.containingModule.moduleClassifier))
         }
         fragment.project.artifacts.add(configuration.name, jarTask)
+        fragment.project.artifacts.add(Dependency.ARCHIVES_CONFIGURATION, jarTask)
     }
 }
 
