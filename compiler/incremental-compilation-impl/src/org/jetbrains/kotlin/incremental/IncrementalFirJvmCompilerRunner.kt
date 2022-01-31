@@ -183,7 +183,9 @@ class IncrementalFirJvmCompilerRunner(
             }
 
             val diagnosticsReporter = DiagnosticReporterFactory.createReporter()
+            val performanceManager = configuration[CLIConfigurationKeys.PERF_MANAGER]
             val compilerEnvironment = ModuleCompilerEnvironment(projectEnvironment, diagnosticsReporter)
+            performanceManager?.notifyCompilerInitialized(0, 0, "${targetId.name}-${targetId.type}")
 
             // !! main class - maybe from cache?
             var mainClassFqName: FqName? = null
@@ -206,7 +208,8 @@ class IncrementalFirJvmCompilerRunner(
                             compilerEnvironment,
                             emptyList(),
                             incrementalExcludesScope,
-                            diagnosticsReporter
+                            diagnosticsReporter,
+                            performanceManager
                         )
 
                     // TODO: consider what to do if many compilations find a main class
@@ -217,7 +220,11 @@ class IncrementalFirJvmCompilerRunner(
                     allCompiledSources.addAll(dirtySources)
 
                     if (diagnosticsReporter.hasErrors) {
-                        FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(diagnosticsReporter, collector)
+                        FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(
+                            diagnosticsReporter,
+                            collector,
+                            configuration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
+                        )
                         return null
                     }
 
@@ -275,7 +282,9 @@ class IncrementalFirJvmCompilerRunner(
 
             val codegenOutput = generateCodeFromIr(irInput, compilerEnvironment)
 
-            FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(diagnosticsReporter, collector)
+            FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(
+                diagnosticsReporter, collector, configuration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
+            )
 
             writeOutputs(
                 projectEnvironment,
