@@ -6,8 +6,7 @@
 #ifndef RUNTIME_UTILS_H
 #define RUNTIME_UTILS_H
 
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstddef>
 
 #include <type_traits>
 
