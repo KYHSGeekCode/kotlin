@@ -17,7 +17,6 @@ import org.jetbrains.kotlin.gradle.internals.NO_NATIVE_STDLIB_PROPERTY_WARNING
 import org.jetbrains.kotlin.gradle.internals.NO_NATIVE_STDLIB_WARNING
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeOutputKind
 import org.jetbrains.kotlin.gradle.transformProjectWithPluginsDsl
-import org.jetbrains.kotlin.gradle.util.isWindows
 import org.jetbrains.kotlin.gradle.util.modify
 import org.jetbrains.kotlin.gradle.util.runProcess
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
@@ -26,9 +25,7 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.konan.target.presetName
 import org.junit.Assume
 import org.junit.Ignore
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ErrorCollector
 import java.io.File
 import java.util.*
 import kotlin.test.assertEquals
@@ -592,11 +589,18 @@ class GeneralNativeIT : BaseGradleIT() {
 
     @Test
     fun testNativeTests() = with(transformNativeTestProject("native-tests")) {
-        val testTasks = listOf("hostTest", "iosTest")
         val hostTestTask = "hostTest"
+        val testTasks = listOf(hostTestTask, "iosTest", "iosArm64Test")
 
-        val suffix = if (isWindows) "exe" else "kexe"
+        val testsToExecute = mutableListOf(":$hostTestTask")
+        when (HostManager.host) {
+            KonanTarget.MACOS_X64 -> testsToExecute.add(":iosTest")
+            KonanTarget.MACOS_ARM64 -> testsToExecute.add(":iosArm64Test")
+            else -> {}
+        }
+        val testsToSkip = testTasks.map { ":$it" } - testsToExecute
 
+        val suffix = HostManager.host.family.exeSuffix
         val defaultOutputFile = "build/bin/host/debugTest/test.$suffix"
         val anotherOutputFile = "build/bin/host/anotherDebugTest/another.$suffix"
 
@@ -615,14 +619,6 @@ class GeneralNativeIT : BaseGradleIT() {
             assertNoSuchFile(defaultOutputFile)
             assertNoSuchFile(anotherOutputFile)
         }
-
-        val testsToExecute = mutableListOf(":$hostTestTask")
-        when (HostManager.host) {
-            KonanTarget.MACOS_X64 -> testsToExecute.add(":iosTest")
-            KonanTarget.MACOS_ARM64 -> testsToExecute.add(":iosArm64Test")
-            else -> { }
-        }
-        val testsToSkip = testTasks.map { ":$it" } - testsToExecute
 
         // Store currently booted simulators to check that they don't leak (MacOS only).
         val bootedSimulatorsBefore = getBootedSimulators(projectDir)
@@ -749,21 +745,27 @@ class GeneralNativeIT : BaseGradleIT() {
                 expectedHostTestResult = "testProject/native-tests/TEST-TestKt.xml"
                 expectedIOSTestResults = listOf(
                     "testProject/native-tests/TEST-TestKt-iOSsim.xml",
-                    "testProject/native-tests/TEST-TestKt-iOSsim_wWarn.xml",
+                    "testProject/native-tests/TEST-TestKt-iOSArm64sim.xml",
                 )
             }
 
             assertTestResults(expectedHostTestResult, hostTestTask)
             // K/N doesn't report line numbers correctly on Linux (see KT-35408).
-            // TODO: Uncomment when this is fixed.
-            //assertStacktrace(hostTestTask, "host")
+            // TODO: Move assertStacktrace(hostTestTask, "host") out of if clause
             if (HostManager.hostIsMac) {
+                assertStacktrace(hostTestTask, "host")
+                val testTarget = when (HostManager.host) {
+                    KonanTarget.MACOS_ARM64 -> "iosArm64"
+                    KonanTarget.MACOS_X64 -> "ios"
+                    else -> throw IllegalStateException("Unsupported host: ${HostManager.host}")
+                }
+                val testTask = "${testTarget}Test"
                 assertTestResultsAnyOf(
                     expectedIOSTestResults[0],
                     expectedIOSTestResults[1],
-                    "iosTest"
+                    testTask
                 )
-                assertStacktrace("iosTest", "ios")
+                assertStacktrace(testTask, testTarget)
             }
         }
     }
