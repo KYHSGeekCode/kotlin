@@ -1,0 +1,4 @@
+FILE: test.kt
+    public final fun foo(n: R|Named|): R|kotlin/Unit| {
+        R|<local>/n|.R|/Named.name| = String()
+    }

@@ -5850,6 +5850,12 @@ public class FirDiagnosticTestGenerated extends AbstractFirDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("reassignmentOnSynthetic.kt")
+            public void testReassignmentOnSynthetic() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/reassignmentOnSynthetic.kt");
+            }
+
+            @Test
             @TestMetadata("receiverResolutionInLambda.kt")
             public void testReceiverResolutionInLambda() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/receiverResolutionInLambda.kt");
