@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.CommonCompilerPerformanceManager
 import org.jetbrains.kotlin.cli.common.config.kotlinSourceRoots
-import org.jetbrains.kotlin.cli.common.fir.FirDiagnosticsCompilerResultsReporter
+import org.jetbrains.kotlin.cli.common.fir.reportToMessageCollector
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.compiler.*
@@ -114,6 +114,7 @@ fun compileModulesUsingFrontendIrAndLaightTree(
             else platformSources.add(file)
         }
 
+        val renderDiagnosticName = moduleConfiguration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
         val diagnosticsReporter = DiagnosticReporterFactory.createReporter()
 
         val compilerInput = ModuleCompilerInput(
@@ -137,6 +138,11 @@ fun compileModulesUsingFrontendIrAndLaightTree(
 
         performanceManager?.notifyAnalysisFinished()
 
+        if (diagnosticsReporter.hasErrors) {
+            diagnosticsReporter.reportToMessageCollector(messageCollector, renderDiagnosticName)
+            continue
+        }
+
         // TODO: consider what to do if many modules has main classes
         if (mainClassFqName == null && moduleConfiguration.get(JVMConfigurationKeys.OUTPUT_JAR) != null) {
             mainClassFqName = findMainClass(analysisResults.fir)
@@ -151,14 +157,14 @@ fun compileModulesUsingFrontendIrAndLaightTree(
 
         val codegenOutput = generateCodeFromIr(irInput, compilerEnvironment)
 
-        FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(
-            diagnosticsReporter, messageCollector, moduleConfiguration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
-        )
+        diagnosticsReporter.reportToMessageCollector(messageCollector, renderDiagnosticName)
 
         performanceManager?.notifyIRGenerationFinished()
         performanceManager?.notifyGenerationFinished()
 
-        outputs.add(codegenOutput.generationState)
+        if (!diagnosticsReporter.hasErrors) {
+            outputs.add(codegenOutput.generationState)
+        }
     }
 
     return writeOutputs(
