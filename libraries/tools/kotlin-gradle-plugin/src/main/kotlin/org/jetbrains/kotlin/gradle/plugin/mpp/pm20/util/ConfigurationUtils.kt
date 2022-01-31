@@ -63,14 +63,14 @@ internal fun copyConfiguration(
 
         // artifacts:
         if (overrideArtifacts != null) {
-            overrideArtifacts(this, configuration.allArtifacts)
+            overrideArtifacts(this, artifacts)
         } else {
             artifacts.addAllLater(project.listProperty { configuration.allArtifacts })
         }
 
         // attributes
         if (overrideAttributes != null) {
-            overrideAttributes(this, configuration.attributes)
+            overrideAttributes(this, attributes)
         } else {
             copyAttributes(configuration.attributes, attributes)
         }
