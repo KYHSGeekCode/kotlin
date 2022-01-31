@@ -12,7 +12,8 @@ namespace {
 // Hash combine functions derived from boost ones.
 // Copyright 2005-2014 Daniel James.
 
-#define BOOST_FUNCTIONAL_HASH_ROTL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
+template <typename X, typename R>
+constexpr auto rotl32(X x, R r) noexcept { return (x << r) | (x >> (32 - r)); }
 
 template<size_t Bits>
 struct HashCompineImpl {
