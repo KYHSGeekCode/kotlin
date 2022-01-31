@@ -251,7 +251,7 @@ internal class KtFirCallResolver(
             ?: return null
         if (targetSymbol !is FirCallableSymbol<*>) return null
         if (targetSymbol is FirErrorFunctionSymbol || targetSymbol is FirErrorPropertySymbol) return null
-        val unsbustitutedKtSignature = targetSymbol.toKtSignature()
+        val unsubstitutedKtSignature = targetSymbol.toKtSignature()
 
         handleCompoundAccessCall(psi, fir, resolveFragmentOfCall)?.let { return it }
 
@@ -262,9 +262,9 @@ internal class KtFirCallResolver(
             //  candidate, `Candidate.substitutor` is not complete. maybe we can carry over the final substitutor if it's available from
             //  body resolve phase?
             val substitutor =
-                (fir as? FirQualifiedAccess)?.createConeSubstitutorFromTypeArguments()?.toKtSubstitutor() ?: KtSubstitutor.Empty(token)
+                (fir as? FirQualifiedAccess)?.createSubstitutorFromTypeArguments(targetSymbol) ?: KtSubstitutor.Empty(token)
             KtPartiallyAppliedSymbol(
-                unsbustitutedKtSignature.substitute(substitutor),
+                unsubstitutedKtSignature.substitute(substitutor),
                 candidate.dispatchReceiverValue?.receiverExpression?.toKtReceiverValue(),
                 candidate.extensionReceiverValue?.receiverExpression?.toKtReceiverValue(),
             )
@@ -305,17 +305,17 @@ internal class KtFirCallResolver(
             }
             val substitutor = fir.createConeSubstitutorFromTypeArguments() ?: return null
             KtPartiallyAppliedSymbol(
-                unsbustitutedKtSignature.substitute(substitutor.toKtSubstitutor()),
+                unsubstitutedKtSignature.substitute(substitutor.toKtSubstitutor()),
                 dispatchReceiver,
                 extensionReceiver,
             )
         } else {
-            KtPartiallyAppliedSymbol(unsbustitutedKtSignature, null, null)
+            KtPartiallyAppliedSymbol(unsubstitutedKtSignature, null, null)
         }
 
         return when (fir) {
             is FirAnnotationCall -> {
-                if (unsbustitutedKtSignature.symbol !is KtConstructorSymbol) return null
+                if (unsubstitutedKtSignature.symbol !is KtConstructorSymbol) return null
                 @Suppress("UNCHECKED_CAST") // safe because of the above check on targetKtSymbol
                 KtAnnotationCall(
                     partiallyAppliedSymbol as KtPartiallyAppliedFunctionSymbol<KtConstructorSymbol>,
@@ -323,7 +323,7 @@ internal class KtFirCallResolver(
                 )
             }
             is FirDelegatedConstructorCall -> {
-                if (unsbustitutedKtSignature.symbol !is KtConstructorSymbol) return null
+                if (unsubstitutedKtSignature.symbol !is KtConstructorSymbol) return null
                 @Suppress("UNCHECKED_CAST") // safe because of the above check on targetKtSymbol
                 KtDelegatedConstructorCall(
                     partiallyAppliedSymbol as KtPartiallyAppliedFunctionSymbol<KtConstructorSymbol>,
@@ -332,7 +332,7 @@ internal class KtFirCallResolver(
                 )
             }
             is FirVariableAssignment -> {
-                if (unsbustitutedKtSignature.symbol !is KtVariableLikeSymbol) return null
+                if (unsubstitutedKtSignature.symbol !is KtVariableLikeSymbol) return null
                 val rhs = fir.rValue.psi as? KtExpression
                 @Suppress("UNCHECKED_CAST") // safe because of the above check on targetKtSymbol
                 KtSimpleVariableAccessCall(
@@ -341,7 +341,7 @@ internal class KtFirCallResolver(
                 )
             }
             is FirPropertyAccessExpression -> {
-                if (unsbustitutedKtSignature.symbol !is KtVariableLikeSymbol) return null
+                if (unsubstitutedKtSignature.symbol !is KtVariableLikeSymbol) return null
                 @Suppress("UNCHECKED_CAST") // safe because of the above check on targetKtSymbol
                 KtSimpleVariableAccessCall(
                     partiallyAppliedSymbol as KtPartiallyAppliedVariableSymbol<KtVariableLikeSymbol>,
@@ -349,17 +349,22 @@ internal class KtFirCallResolver(
                 )
             }
             is FirFunctionCall -> {
-                if (unsbustitutedKtSignature.symbol !is KtFunctionLikeSymbol) return null
-                val argumentMapping =
+                if (unsubstitutedKtSignature.symbol !is KtFunctionLikeSymbol) return null
+                val argumentMapping = if (candidate is Candidate) {
+                    candidate.argumentMapping
+                } else {
+                    fir.argumentMapping
+                }
+                val argumentMappingWithoutExtensionReceiver =
                     if (firstArgIsExtensionReceiver) {
-                        fir.argumentMapping?.entries?.drop(1)
+                        argumentMapping?.entries?.drop(1)
                     } else {
-                        fir.argumentMapping?.entries
+                        argumentMapping?.entries
                     }
                 @Suppress("UNCHECKED_CAST") // safe because of the above check on targetKtSymbol
                 KtSimpleFunctionCall(
                     partiallyAppliedSymbol as KtPartiallyAppliedFunctionSymbol<KtFunctionLikeSymbol>,
-                    argumentMapping
+                    argumentMappingWithoutExtensionReceiver
                         ?.createArgumentMapping(partiallyAppliedSymbol.signature as KtFunctionLikeSignature<*>)
                         ?: LinkedHashMap(),
                     fir is FirImplicitInvokeCall
