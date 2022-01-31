@@ -138,14 +138,14 @@ fun compileModulesUsingFrontendIrAndLaightTree(
 
         performanceManager?.notifyAnalysisFinished()
 
-        if (diagnosticsReporter.hasErrors) {
-            diagnosticsReporter.reportToMessageCollector(messageCollector, renderDiagnosticName)
-            continue
-        }
-
         // TODO: consider what to do if many modules has main classes
         if (mainClassFqName == null && moduleConfiguration.get(JVMConfigurationKeys.OUTPUT_JAR) != null) {
             mainClassFqName = findMainClass(analysisResults.fir)
+        }
+
+        if (diagnosticsReporter.hasErrors) {
+            diagnosticsReporter.reportToMessageCollector(messageCollector, renderDiagnosticName)
+            continue
         }
 
         performanceManager?.notifyGenerationStarted()

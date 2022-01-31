@@ -20,7 +20,7 @@ import org.jetbrains.kotlin.cli.common.computeKotlinPaths
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoot
 import org.jetbrains.kotlin.cli.common.config.kotlinSourceRoots
 import org.jetbrains.kotlin.cli.common.environment.setIdeaIoUseFallback
-import org.jetbrains.kotlin.cli.common.fir.FirDiagnosticsCompilerResultsReporter
+import org.jetbrains.kotlin.cli.common.fir.reportToMessageCollector
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.GroupingMessageCollector
 import org.jetbrains.kotlin.cli.common.messages.IrMessageCollector
@@ -185,10 +185,13 @@ class IncrementalFirJvmCompilerRunner(
             val diagnosticsReporter = DiagnosticReporterFactory.createReporter()
             val performanceManager = configuration[CLIConfigurationKeys.PERF_MANAGER]
             val compilerEnvironment = ModuleCompilerEnvironment(projectEnvironment, diagnosticsReporter)
+
             performanceManager?.notifyCompilerInitialized(0, 0, "${targetId.name}-${targetId.type}")
 
             // !! main class - maybe from cache?
             var mainClassFqName: FqName? = null
+
+            val renderDiagnosticName = configuration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
 
             var incrementalExcludesScope: AbstractProjectFileSearchScope? = null
 
@@ -202,6 +205,8 @@ class IncrementalFirJvmCompilerRunner(
                         configuration
                     )
 
+                    performanceManager?.notifyAnalysisStarted()
+
                     val analysisResults =
                         compileModuleToAnalyzedFir(
                             compilerInput,
@@ -212,6 +217,8 @@ class IncrementalFirJvmCompilerRunner(
                             performanceManager
                         )
 
+                    performanceManager?.notifyAnalysisFinished()
+
                     // TODO: consider what to do if many compilations find a main class
                     if (mainClassFqName == null && configuration.get(JVMConfigurationKeys.OUTPUT_JAR) != null) {
                         mainClassFqName = findMainClass(analysisResults.fir)
@@ -220,11 +227,7 @@ class IncrementalFirJvmCompilerRunner(
                     allCompiledSources.addAll(dirtySources)
 
                     if (diagnosticsReporter.hasErrors) {
-                        FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(
-                            diagnosticsReporter,
-                            collector,
-                            configuration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
-                        )
+                        diagnosticsReporter.reportToMessageCollector(messageCollector, renderDiagnosticName)
                         return null
                     }
 
@@ -251,6 +254,9 @@ class IncrementalFirJvmCompilerRunner(
 
             val cycleResult = firIncrementalCycle() ?: return ExitCode.COMPILATION_ERROR to allCompiledSources
 
+            performanceManager?.notifyGenerationStarted()
+            performanceManager?.notifyIRTranslationStarted()
+
             val extensions = JvmGeneratorExtensionsImpl(configuration)
             val irGenerationExtensions =
                 (projectEnvironment as? VfsBasedProjectEnvironment)?.project?.let { IrGenerationExtension.getInstances(it) }.orEmpty()
@@ -270,6 +276,8 @@ class IncrementalFirJvmCompilerRunner(
                 irGenerationExtensions
             )
 
+            performanceManager?.notifyIRTranslationFinished()
+
             val irInput = ModuleCompilerIrBackendInput(
                 targetId,
                 configuration,
@@ -282,9 +290,10 @@ class IncrementalFirJvmCompilerRunner(
 
             val codegenOutput = generateCodeFromIr(irInput, compilerEnvironment)
 
-            FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(
-                diagnosticsReporter, collector, configuration.getBoolean(CLIConfigurationKeys.RENDER_DIAGNOSTIC_INTERNAL_NAME)
-            )
+            performanceManager?.notifyIRGenerationFinished()
+            performanceManager?.notifyGenerationFinished()
+
+            diagnosticsReporter.reportToMessageCollector(messageCollector, renderDiagnosticName)
 
             writeOutputs(
                 projectEnvironment,
