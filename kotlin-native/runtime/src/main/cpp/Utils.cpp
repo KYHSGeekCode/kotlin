@@ -6,6 +6,7 @@
 #include "Utils.hpp"
 
 #include <climits>
+#include <cstdint>
 
 namespace {
 
@@ -18,7 +19,7 @@ constexpr auto rotl32(X x, R r) noexcept { return (x << r) | (x >> (32 - r)); }
 template<size_t Bits>
 struct HashCompineImpl {
     template <typename SizeT>
-    inline static SizeT fn(SizeT seed, SizeT value) {
+    constexpr static SizeT fn(SizeT seed, SizeT value) {
         seed ^= value + 0x9e3779b9 + (seed<<6) + (seed>>2);
         return seed;
     }
@@ -26,16 +27,16 @@ struct HashCompineImpl {
 
 template<>
 struct HashCompineImpl<32> {
-    inline static uint32_t fn(uint32_t h1, uint32_t k1) {
+    constexpr static uint32_t fn(uint32_t h1, uint32_t k1) {
         const uint32_t c1 = 0xcc9e2d51;
         const uint32_t c2 = 0x1b873593;
 
         k1 *= c1;
-        k1 = BOOST_FUNCTIONAL_HASH_ROTL32(k1,15);
+        k1 = rotl32(k1,15);
         k1 *= c2;
 
         h1 ^= k1;
-        h1 = BOOST_FUNCTIONAL_HASH_ROTL32(h1,13);
+        h1 = rotl32(h1,13);
         h1 = h1*5+0xe6546b64;
 
         return h1;
@@ -44,7 +45,7 @@ struct HashCompineImpl<32> {
 
 template<>
 struct HashCompineImpl<64> {
-    inline static uint64_t fn(uint64_t h, uint64_t k) {
+    constexpr static uint64_t fn(uint64_t h, uint64_t k) {
         const uint64_t m = (uint64_t(0xc6a4a793) << 32) + 0x5bd1e995;
         const int r = 47;
 
