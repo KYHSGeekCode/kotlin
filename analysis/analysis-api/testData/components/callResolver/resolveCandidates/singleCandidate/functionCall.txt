@@ -1,0 +1,22 @@
+KtSuccessCallInfo:
+  call = KtSimpleFunctionCall:
+    isImplicitInvoke = false
+    partiallyAppliedSymbol = KtPartiallyAppliedSymbol:
+      dispatchReceiver = null
+      extensionReceiver = null
+      signature = KtFunctionLikeSignature:
+        receiverType = null
+        returnType = kotlin.Unit
+        symbol = /function(a: kotlin.Int): kotlin.Unit
+        valueParameters = [
+          KtVariableLikeSignature:
+            receiverType = null
+            returnType = kotlin.Int
+            symbol = a: kotlin.Int
+        ]
+    argumentMapping = {
+      1 -> (KtVariableLikeSignature:
+        receiverType = null
+        returnType = kotlin.Int
+        symbol = a: kotlin.Int)
+    }
