@@ -5,10 +5,9 @@
 
 package org.jetbrains.kotlin.ir.util
 
-import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
-import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
 import org.jetbrains.kotlin.types.KotlinType
 
@@ -80,6 +79,11 @@ open class StubGeneratorExtensions {
         get() = null
 
     open fun registerDeclarations(symbolTable: SymbolTable) {}
+
+    // in IR Generator enums also have special handling, but here we have not enough data for it
+    // probably, that is not a problem, because you can't add new enum value to external module
+    open fun getEffectiveModality(classDescriptor: ClassDescriptor): Modality? =
+        Modality.OPEN.takeIf { DescriptorUtils.isAnnotationClass(classDescriptor) }
 
     companion object {
         @JvmField

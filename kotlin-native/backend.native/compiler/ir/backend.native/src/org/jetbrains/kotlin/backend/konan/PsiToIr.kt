@@ -14,6 +14,9 @@ import org.jetbrains.kotlin.backend.konan.ir.konanLibrary
 import org.jetbrains.kotlin.backend.konan.serialization.*
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.languageVersionSettings
+import org.jetbrains.kotlin.descriptors.ClassDescriptor
+import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.konan.DeserializedKlibModuleOrigin
 import org.jetbrains.kotlin.descriptors.konan.KlibModuleOrigin
@@ -33,6 +36,13 @@ import org.jetbrains.kotlin.psi2ir.generators.DeclarationStubGeneratorImpl
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.CleanableBindingContext
 import org.jetbrains.kotlin.utils.DFS
+
+internal object KonanStubGeneratorExtensions : StubGeneratorExtensions() {
+    // Conservatively assume enums aren't final, otherwise the codegen might try to call a virtual method directly.
+    // (Precise information whether a enum is final or not is missing in descriptors and therefore, in Lazy IR as well).
+    override fun getEffectiveModality(classDescriptor: ClassDescriptor): Modality? =
+            Modality.OPEN.takeIf { classDescriptor.kind == ClassKind.ENUM_CLASS } ?: super.getEffectiveModality(classDescriptor)
+}
 
 internal fun Context.psiToIr(
         symbolTable: SymbolTable,
@@ -61,6 +71,7 @@ internal fun Context.psiToIr(
             moduleDescriptor, symbolTable,
             generatorContext.irBuiltIns,
             DescriptorByIdSignatureFinderImpl(moduleDescriptor, KonanManglerDesc),
+            KonanStubGeneratorExtensions
     )
     val irBuiltInsOverDescriptors = generatorContext.irBuiltIns as IrBuiltInsOverDescriptors
     val functionIrClassFactory: KonanIrAbstractDescriptorBasedFunctionFactory =

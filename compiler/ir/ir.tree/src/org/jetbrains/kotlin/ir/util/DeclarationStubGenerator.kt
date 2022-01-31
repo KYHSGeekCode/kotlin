@@ -246,14 +246,6 @@ abstract class DeclarationStubGenerator(
         }
     }
 
-    // in IR Generator enums also have special handling, but here we have not enough data for it
-    // probably, that is not a problem, because you can't add new enum value to external module
-    private fun getEffectiveModality(classDescriptor: ClassDescriptor): Modality =
-        if (DescriptorUtils.isAnnotationClass(classDescriptor))
-            Modality.OPEN
-        else
-            classDescriptor.modality
-
     fun generateClassStub(descriptor: ClassDescriptor): IrClass {
         val referenceClass = symbolTable.referenceClass(descriptor)
         if (referenceClass.isBound) {
@@ -264,7 +256,8 @@ abstract class DeclarationStubGenerator(
             IrLazyClass(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin,
                 it, descriptor,
-                descriptor.name, descriptor.kind, descriptor.visibility, getEffectiveModality(descriptor),
+                descriptor.name, descriptor.kind, descriptor.visibility,
+                modality = extensions.getEffectiveModality(descriptor) ?: descriptor.modality,
                 isCompanion = descriptor.isCompanionObject,
                 isInner = descriptor.isInner,
                 isData = descriptor.isData,
