@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.backend.common.CompilationException
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataVersion
 import org.jetbrains.kotlin.backend.wasm.compileWasm
+import org.jetbrains.kotlin.backend.wasm.prepareWasmCompilation
 import org.jetbrains.kotlin.backend.wasm.wasmPhases
 import org.jetbrains.kotlin.cli.common.*
 import org.jetbrains.kotlin.cli.common.ExitCode.*
@@ -321,13 +322,17 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
 
 
             if (arguments.wasm) {
-                val res = compileWasm(
-                    module,
-                    PhaseConfig(wasmPhases),
-                    IrFactoryImpl,
+                val (moduleFragment, backendContext) = prepareWasmCompilation(
+                    depsDescriptors = module,
+                    phaseConfig = PhaseConfig(wasmPhases),
+                    irFactory = IrFactoryImpl,
                     exportedDeclarations = setOf(FqName("main")),
-                    emitNameSection = arguments.wasmDebug,
                     propertyLazyInitialization = arguments.irPropertyLazyInitialization,
+                )
+                val res = compileWasm(
+                    moduleFragment = moduleFragment,
+                    backendContext = backendContext,
+                    emitNameSection = arguments.wasmDebug,
                     dceEnabled = arguments.irDce,
                 )
                 val outputWasmFile = outputFile.withReplacedExtensionOrNull(outputFile.extension, "wasm")!!
