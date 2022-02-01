@@ -114,7 +114,7 @@ internal class KClassImpl<T : Any>(
             } else {
                 jClass.getDeclaredField(JvmAbi.INSTANCE_FIELD)
             }
-            field.get(null) as T
+            field.get(null) as T?
         }
 
         val typeParameters: List<KTypeParameter> by ReflectProperties.lazySoft {
@@ -249,7 +249,13 @@ internal class KClassImpl<T : Any>(
         return (jClass.wrapperByPrimitive ?: jClass).isInstance(value)
     }
 
-    override val typeParameters: List<KTypeParameter> get() = data().typeParameters
+    override val typeParameters: List<KTypeParameter> get() = 
+    
+    
+    
+    
+    
+    .typeParameters
 
     override val supertypes: List<KType> get() = data().supertypes
 
